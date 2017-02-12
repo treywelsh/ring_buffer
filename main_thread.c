@@ -61,7 +61,6 @@ thrds_clean(struct thrd_info * tinfo) {
     free(tinfo);
 }
 
-/* Busy waiting */
 static void *
 thrd_work(void *arg) {
     struct thrd_info *tinfo = arg;

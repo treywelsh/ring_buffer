@@ -29,6 +29,16 @@ typedef struct ringb ringb_t;
  * The ring buffer is full when : read_index == (write index + 1) % mask
  * Because of this choice (Which has been made in order to distinguish
  * full and empty cases), the real size is decremented of one element.
+ *
+ * Thread safety note :
+ * The sequential consistency model ensure threads synchronization via the
+ * C11 atomics.
+ * "whenever thread T2 sees a modification thread T1 has effected on an"
+ * atomic variable A, all side effects before that modication in thread T1
+ * are visible to T2."
+ * "The functional writing of atomic operations (e.g atomic_load)
+ * is superfluous for sequential consistency"
+ *
  */
 
 #define ringb_get_len(ring) ((ring)->bufmask + 1)
