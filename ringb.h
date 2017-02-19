@@ -93,7 +93,6 @@ ringb_clean(ringb_t *r)
  *
  */
 
-#define ringb_get_last_unsafe(ring, elt) (*(elt) = ((ring)->buf)[(ring)->r_i])
 
 #ifdef RINGB_SPSC_SAFE
 #define ringb_incr_idx(idx, mask) atomic_store_explicit(&(idx), (idx + 1) & \
@@ -105,6 +104,9 @@ ringb_clean(ringb_t *r)
 #define ringb_incr_r_i(ring) (ringb_incr_idx((ring)->r_i, (ring)->bufmask))
 #define ringb_incr_w_i(ring) (ringb_incr_idx((ring)->w_i, (ring)->bufmask))
 
+#define ringb_peek_unsafe(ring, elt) (*(elt) = ((ring)->buf)[(ring)->r_i])
+#define ringb_next ringb_incr_r_i
+
 /* Don't add to a full buffer */
 #define ringb_add_unsafe(ring, elt) do { \
 		(ring)->buf[(ring)->w_i] = (elt); \
@@ -113,8 +115,8 @@ ringb_clean(ringb_t *r)
 
 /* Don't get from an empty buffer */
 #define ringb_get_unsafe(ring, elt) do { \
-		ringb_get_last_unsafe(ring, elt); \
-		ringb_incr_r_i((ring)); \
+		ringb_peek_unsafe(ring, elt); \
+		ringb_next((ring)); \
 } while (0)
 
 
