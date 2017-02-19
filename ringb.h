@@ -14,13 +14,13 @@
 typedef unsigned int ringb_data_t;
 
 struct ringb {
-    ringb_data_t * buf;
-    unsigned int bufmask;
+	ringb_data_t *buf;
+	unsigned int bufmask;
 
 #ifdef RINGB_SPSC_SAFE
-    atomic_uint w_i, r_i;
+	atomic_uint w_i, r_i;
 #else
-    unsigned int  w_i, r_i;
+	unsigned int w_i, r_i;
 #endif
 };
 typedef struct ringb ringb_t;
@@ -42,33 +42,36 @@ typedef struct ringb ringb_t;
  */
 
 #define ringb_get_len(ring) ((ring)->bufmask + 1)
-#define ringb_is_full(ring) ((ring)->r_i == (((ring)->w_i + 1) & (ring)->bufmask))
+#define ringb_is_full(ring) ((ring)->r_i == (((ring)->w_i + 1) & \
+	(ring)->bufmask))
 #define ringb_is_empty(ring) ((ring)->w_i == (ring)->r_i)
 
 static inline int
-ringb_init(ringb_t * r, size_t r_two_pow_sz) {
-    size_t size;
+ringb_init(ringb_t *r, size_t r_two_pow_sz)
+{
+	size_t size;
 
-    assert(r != NULL);
+	assert(r != NULL);
 
-    size = 1 << r_two_pow_sz;
+	size = 1 << r_two_pow_sz;
 
-    r->buf = malloc(size * sizeof(*(r->buf)));
-    if (r->buf == NULL) {
-        return 1;
-    }
-    r->w_i = 0;
-    r->r_i = 0;
-    r->bufmask = size - 1;
+	r->buf = malloc(size * sizeof(*(r->buf)));
+	if (r->buf == NULL) {
+		return 1;
+	}
+	r->w_i = 0;
+	r->r_i = 0;
+	r->bufmask = size - 1;
 
-    return 0;
+	return 0;
 }
 
 static inline void
-ringb_clean(ringb_t * r) {
-    assert(r != NULL);
+ringb_clean(ringb_t *r)
+{
+	assert(r != NULL);
 
-    free(r->buf);
+	free(r->buf);
 }
 
 /*
@@ -83,16 +86,16 @@ ringb_clean(ringb_t * r) {
 #define ringb_incr_r_i(ring) ((ring)->r_i = ((ring)->r_i + 1) & (ring)->bufmask)
 
 /* Don't add to a full buffer */
-#define ringb_add_unsafe(ring, elt) do{ \
-    (ring)->buf[(ring)->w_i] = (elt); \
-    (ring)->w_i = ((ring)->w_i + 1) & (ring)->bufmask; \
-}while(0)
+#define ringb_add_unsafe(ring, elt) do { \
+		(ring)->buf[(ring)->w_i] = (elt); \
+		(ring)->w_i = ((ring)->w_i + 1) & (ring)->bufmask; \
+} while (0)
 
 /* Don't get from an empty buffer */
-#define ringb_get_unsafe(ring, elt) do{ \
-    ringb_get_last_unsafe(ring, elt); \
-    ringb_incr_r_i(ring); \
-}while(0)
+#define ringb_get_unsafe(ring, elt) do { \
+		ringb_get_last_unsafe(ring, elt); \
+		ringb_incr_r_i(ring); \
+} while (0)
 
 
 /*
@@ -101,36 +104,39 @@ ringb_clean(ringb_t * r) {
 
 /* If full, discard oldest element */
 static inline void
-ringb_force_add(ringb_t * ring, ringb_data_t elt) {
-    assert(ring != NULL);
-    if (ringb_is_full(ring)) {
-        ringb_incr_r_i(ring);
-    }
-    ringb_add_unsafe(ring, elt);
+ringb_force_add(ringb_t *ring, ringb_data_t elt)
+{
+	assert(ring != NULL);
+	if (ringb_is_full(ring)) {
+		ringb_incr_r_i(ring);
+	}
+	ringb_add_unsafe(ring, elt);
 }
 
 /* If full, do not add */
 static inline int
-ringb_add(ringb_t * ring, ringb_data_t elt) {
-    assert(ring != NULL);
-    if (ringb_is_full(ring)) {
-        return 1;
-    }
-    ringb_add_unsafe(ring, elt);
-    return 0;
+ringb_add(ringb_t *ring, ringb_data_t elt)
+{
+	assert(ring != NULL);
+	if (ringb_is_full(ring)) {
+		return 1;
+	}
+	ringb_add_unsafe(ring, elt);
+	return 0;
 }
 
 static inline int
-ringb_get(ringb_t * ring, ringb_data_t * elt) {
-    assert(ring != NULL);
-    assert(elt != NULL);
+ringb_get(ringb_t *ring, ringb_data_t *elt)
+{
+	assert(ring != NULL);
+	assert(elt != NULL);
 
-    if(ringb_is_empty(ring)) {
-        return 1;
-    }
+	if (ringb_is_empty(ring)) {
+		return 1;
+	}
 
-    ringb_get_unsafe(ring, elt);
-    return 0;
+	ringb_get_unsafe(ring, elt);
+	return 0;
 }
 
 #endif /* RINGB_H_ */
