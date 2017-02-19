@@ -16,7 +16,7 @@ THREAD ?= 0
 SANITIZE ?= 0
 
 #Mandatory flags
-CFLAGS += -fstrict-aliasing ${INCLUDE}
+CFLAGS += ${INCLUDE}
 
 ifeq ($(DEBUG), 1)
 	CFLAGS += -O0 -DDEBUG -g -fno-inline
