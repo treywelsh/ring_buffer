@@ -30,21 +30,27 @@ typedef struct ringb ringb_t;
  * Because of this choice (Which has been made in order to distinguish
  * full and empty cases), the real size is decremented of one element.
  *
- * Thread safety note :
- * The sequential consistency model ensure threads synchronization via the
- * C11 atomics.
- * "whenever thread T2 sees a modification thread T1 has effected on an"
- * atomic variable A, all side effects before that modication in thread T1
- * are visible to T2."
- * "The functional writing of atomic operations (e.g atomic_load)
- * is superfluous for sequential consistency"
- *
  */
 
 #define ringb_get_len(ring) ((ring)->bufmask + 1)
+
+#ifdef RINGB_SPSC_SAFE
+
+#define ringb_is_full(ring) (atomic_load_explicit(&(ring)->r_i, \
+	memory_order_acquire) == \
+	(((ring)->w_i + 1) & (ring)->bufmask))
+#define ringb_is_empty(ring) (atomic_load_explicit(&(ring)->w_i, \
+	memory_order_acquire) == \
+	(ring)->r_i)
+
+#else
+
 #define ringb_is_full(ring) ((ring)->r_i == (((ring)->w_i + 1) & \
 	(ring)->bufmask))
 #define ringb_is_empty(ring) ((ring)->w_i == (ring)->r_i)
+
+#endif
+
 
 static inline int
 ringb_init(ringb_t *r, size_t r_two_pow_sz)
@@ -59,8 +65,13 @@ ringb_init(ringb_t *r, size_t r_two_pow_sz)
 	if (r->buf == NULL) {
 		return 1;
 	}
+#ifdef RINGB_SPSC_SAFE
+    atomic_init(&r->w_i, 0);
+    atomic_init(&r->r_i, 0);
+#else
 	r->w_i = 0;
 	r->r_i = 0;
+#endif
 	r->bufmask = size - 1;
 
 	return 0;
@@ -83,18 +94,27 @@ ringb_clean(ringb_t *r)
  */
 
 #define ringb_get_last_unsafe(ring, elt) (*(elt) = ((ring)->buf)[(ring)->r_i])
-#define ringb_incr_r_i(ring) ((ring)->r_i = ((ring)->r_i + 1) & (ring)->bufmask)
+
+#ifdef RINGB_SPSC_SAFE
+#define ringb_incr_idx(idx, mask) atomic_store_explicit(&(idx), (idx + 1) & \
+	(mask), memory_order_release)
+#else
+#define ringb_incr_idx(idx, mask) ((idx) = (idx + 1) & (mask))
+#endif
+
+#define ringb_incr_r_i(ring) (ringb_incr_idx((ring)->r_i, (ring)->bufmask))
+#define ringb_incr_w_i(ring) (ringb_incr_idx((ring)->w_i, (ring)->bufmask))
 
 /* Don't add to a full buffer */
 #define ringb_add_unsafe(ring, elt) do { \
 		(ring)->buf[(ring)->w_i] = (elt); \
-		(ring)->w_i = ((ring)->w_i + 1) & (ring)->bufmask; \
+		ringb_incr_w_i((ring)); \
 } while (0)
 
 /* Don't get from an empty buffer */
 #define ringb_get_unsafe(ring, elt) do { \
 		ringb_get_last_unsafe(ring, elt); \
-		ringb_incr_r_i(ring); \
+		ringb_incr_r_i((ring)); \
 } while (0)
 
 
