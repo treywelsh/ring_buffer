@@ -13,6 +13,7 @@ OBJ_THREAD = $(SRC_THREAD:.c=.o)
 DEBUG ?= 0
 STATIC ?= 0
 THREAD ?= 0
+SANITIZE ?= 0
 
 #Mandatory flags
 CFLAGS += -fstrict-aliasing ${INCLUDE}
@@ -21,6 +22,10 @@ ifeq ($(DEBUG), 1)
 	CFLAGS += -O0 -DDEBUG -g -fno-inline
 else
 	CFLAGS += -O3 -DNDEBUG -march=native
+endif
+
+ifeq ($(SANITIZE), 1)
+	CFLAGS += -fsanitize=thread
 endif
 
 ifeq ($(STATIC), 1)
